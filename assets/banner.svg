@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 380" width="1280" height="380" role="img" font-family="'Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif">
+  <title>UE4SS-Bootstrap</title>
+  <desc>A dwmapi.dll proxy that installs and auto-updates UE4SS.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#15171b"/>
+      <stop offset="1" stop-color="#1d2128"/>
+    </linearGradient>
+    <marker id="ah" viewBox="0 0 12 12" refX="2.5" refY="6" markerWidth="20" markerHeight="20" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M0,0 L12,6 L0,12 Z" fill="#58a6ff"/>
+    </marker>
+  </defs>
+
+  <rect x="1" y="1" width="1278" height="378" rx="20" fill="url(#bg)" stroke="#2a2f37" stroke-width="1.5"/>
+
+  <g opacity="0.05" fill="none" stroke="#ffffff">
+    <circle cx="1170" cy="190" r="230" stroke-width="1.5"/>
+    <circle cx="1170" cy="190" r="165" stroke-width="1.5"/>
+    <circle cx="1170" cy="190" r="100" stroke-width="1.5"/>
+  </g>
+  <g fill="#58a6ff" opacity="0.25">
+    <circle cx="1015" cy="120" r="3"/>
+    <circle cx="1080" cy="285" r="3"/>
+    <circle cx="1240" cy="95" r="3"/>
+    <circle cx="1205" cy="300" r="3"/>
+  </g>
+
+  <g>
+    <path d="M172,107 A86,86 0 0 1 172,273" fill="none" stroke="#58a6ff" stroke-width="9" stroke-linecap="round" marker-end="url(#ah)"/>
+    <path d="M128,273 A86,86 0 0 1 128,107" fill="none" stroke="#58a6ff" stroke-width="9" stroke-linecap="round" marker-end="url(#ah)"/>
+    <rect x="112" y="152" width="76" height="76" rx="14" fill="#28303c" stroke="#3b4756" stroke-width="1.5"/>
+    <text x="150" y="197" text-anchor="middle" fill="#cdd6e2" font-size="22" font-weight="700" letter-spacing="1">DLL</text>
+  </g>
+
+  <text x="298" y="180" font-size="78" font-weight="800" letter-spacing="-1">
+    <tspan fill="#f1f3f5">UE4SS</tspan><tspan fill="#58a6ff">-Bootstrap</tspan>
+  </text>
+
+  <text x="301" y="226" font-size="27" font-weight="400" fill="#98a2b0">Installs and auto-updates UE4SS &#8212; a single dwmapi.dll</text>
+
+  <g font-size="18" font-weight="500" fill="#aeb8c4">
+    <rect x="301" y="272" width="156" height="36" rx="10" fill="#232a33" stroke="#353f4a" stroke-width="1"/>
+    <text x="379" y="296" text-anchor="middle">self-contained</text>
+    <rect x="469" y="272" width="244" height="36" rx="10" fill="#232a33" stroke="#353f4a" stroke-width="1"/>
+    <text x="591" y="296" text-anchor="middle">stable / nightly / pinned</text>
+  </g>
+
+  <text x="1244" y="346" text-anchor="end" font-size="17" fill="#5d6670">v1.0.0</text>
+</svg>

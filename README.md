@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/banner.svg" alt="UE4SS-Bootstrap" width="100%">
+</p>
+
 # UE4SS-Bootstrap (dwmapi.dll)
 
 A `dwmapi.dll` proxy that installs UE4SS from scratch and keeps it updated before
