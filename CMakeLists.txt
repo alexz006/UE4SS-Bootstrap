@@ -46,6 +46,11 @@ target_include_directories(dwmapi PRIVATE src)
 target_compile_definitions(dwmapi PRIVATE UNICODE _UNICODE NOMINMAX)
 
 if(UPDATER_ENABLED)
+    # Embed config/updater.ini as the built-in default config.
+    file(READ "${CMAKE_CURRENT_SOURCE_DIR}/config/updater.ini" DEFAULT_CONFIG_CONTENT)
+    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/default_config.inc.in"
+                   "${CMAKE_BINARY_DIR}/generated/default_config.inc" @ONLY)
+    target_include_directories(dwmapi PRIVATE "${CMAKE_BINARY_DIR}/generated")
     target_compile_definitions(dwmapi PRIVATE UPDATER_ENABLED)
     target_link_libraries(dwmapi PRIVATE winhttp)
 endif()

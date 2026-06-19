@@ -2,6 +2,7 @@
 #include "ini.hpp"
 #include "progress.hpp"
 #include "miniz.h"
+#include "default_config.inc"
 
 #include <cstdint>
 #include <cstdio>
@@ -714,7 +715,13 @@ void run_blocking(const fs::path& baseDir)
     ini::Ini cfg;
     if (!cfg.load(iniPath.wstring()))
     {
-        return;  // no config: do nothing
+        // no config: write the bundled default and continue with it
+        std::error_code ec;
+        fs::create_directories(ue4ssDir, ec);
+        std::ofstream out(iniPath, std::ios::binary | std::ios::trunc);
+        if (out) { out.write(kDefaultConfig, sizeof(kDefaultConfig) - 1); out.close(); }
+        log_line("no config: created default updater.ini");
+        if (!cfg.load(iniPath.wstring())) return;  // couldn't create/read it
     }
     if (!cfg.get_bool("updater", "enabled", false))
     {

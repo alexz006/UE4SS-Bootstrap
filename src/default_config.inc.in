@@ -1,0 +1,2 @@
+// Generated from config/updater.ini at build time.
+static const char kDefaultConfig[] = R"UE4SSINI(@DEFAULT_CONFIG_CONTENT@)UE4SSINI";
