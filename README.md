@@ -5,7 +5,7 @@
 # UE4SS-Bootstrap (dwmapi.dll)
 
 A `dwmapi.dll` proxy that installs UE4SS from scratch and keeps it updated before
-the game loads it. It is a clone of the RE-UE4SS proxy (same 143 exports, forwarding,
+the game loads it. It is a clone of the [RE-UE4SS](https://github.com/UE4SS-RE/RE-UE4SS) proxy (same 143 exports, forwarding,
 `--disable-ue4ss` / `--ue4ss-path` / `override.txt`) plus an in-DLL installer/updater.
 
 ## Install
