@@ -615,8 +615,7 @@ bool extract_zip(const fs::path& zipPath, const fs::path& ue4ssDir, const ini::I
     return ok;
 }
 
-// Set Mods\mods.txt enable flags from [modules] (Name : 1/0), preserving the
-// rest of the file. No-op if Mods\ doesn't exist.
+// Apply [modules] flags to mods.txt and each mod's enabled.txt (listed, installed mods only).
 void sync_mods_txt(const fs::path& ue4ssDir, const ini::Ini& cfg)
 {
     auto sec = cfg.data.find("modules");
@@ -647,6 +646,23 @@ void sync_mods_txt(const fs::path& ue4ssDir, const ini::Ini& cfg)
         want[kv.first] = {c != canon.end() ? c->second : kv.first, on};
     }
     if (want.empty()) return;
+
+    // enabled.txt per mod folder: create when on, remove when off (installed mods only)
+    for (auto& kv : want)
+    {
+        auto c = canon.find(kv.first);
+        if (c == canon.end()) continue;  // not installed -> leave alone
+        const fs::path enabledTxt = modsDir / c->second / "enabled.txt";
+        std::error_code e;
+        if (kv.second.on)
+        {
+            if (!fs::exists(enabledTxt, e)) { std::ofstream create(enabledTxt); }
+        }
+        else
+        {
+            fs::remove(enabledTxt, e);
+        }
+    }
 
     const fs::path modsTxt = modsDir / "mods.txt";
     std::vector<std::string> lines;

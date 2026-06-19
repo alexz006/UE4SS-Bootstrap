@@ -39,7 +39,7 @@ add_library(dwmapi SHARED ${PROXY_SOURCES})
 set_target_properties(dwmapi PROPERTIES
     OUTPUT_NAME "dwmapi"
     PREFIX ""
-    LINK_FLAGS "/DEF:\"${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_exports.def\" /VERSION:1.0"
+    LINK_FLAGS "/DEF:\"${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_exports.def\" /VERSION:1.1"
 )
 
 target_include_directories(dwmapi PRIVATE src)
@@ -57,7 +57,6 @@ endif()
 
 set_source_files_properties(src/miniz.c PROPERTIES COMPILE_DEFINITIONS "MINIZ_NO_ZLIB_COMPATIBLE_NAMES")
 
-# Whole-program optimization (LTCG) + dead-code elimination. /GL and /Gy only on
-# C/C++ (not the MASM stubs); /OPT:REF + /OPT:ICF strip unused/duplicate code.
+# Whole-program optimization (LTCG) + dead-code elimination.
 target_compile_options(dwmapi PRIVATE $<$<COMPILE_LANGUAGE:C,CXX>:/GL /Gy>)
 target_link_options(dwmapi PRIVATE /LTCG /OPT:REF /OPT:ICF)
