@@ -5,6 +5,7 @@
 
 #include <cstdint>
 #include <cstdio>
+#include <exception>
 #include <fstream>
 #include <functional>
 #include <map>
@@ -37,6 +38,18 @@ std::wstring widen(const std::string& s)
     MultiByteToWideChar(CP_UTF8, 0, s.data(), (int)s.size(), w.data(), n);
     return w;
 }
+
+// Named-mutex lock, one per install.
+struct UpdateLock
+{
+    HANDLE h = nullptr;
+    bool owned = false;
+    ~UpdateLock()
+    {
+        if (owned && h) ReleaseMutex(h);
+        if (h) CloseHandle(h);
+    }
+};
 
 std::string now_string()
 {
@@ -438,7 +451,8 @@ std::vector<int> parse_version(const std::string& s)
 
 std::optional<std::string> installed_file_version(const fs::path& dll)
 {
-    if (!fs::exists(dll)) return std::nullopt;
+    std::error_code ec;
+    if (!fs::exists(dll, ec)) return std::nullopt;
     DWORD dummy = 0;
     DWORD size = GetFileVersionInfoSizeW(dll.c_str(), &dummy);
     if (!size) return std::nullopt;
@@ -499,7 +513,7 @@ bool is_selected(const std::string& rel, const ini::Ini& cfg, bool overwriteSett
 
     bool core = cfg.get_bool("modules", "core", true);
 
-    auto absent = [&]() { return !fs::exists(ue4ssDir / fs::path(widen(rel))); };
+    auto absent = [&]() { std::error_code e; return !fs::exists(ue4ssDir / fs::path(widen(rel)), e); };
 
     if (parts[0] == "dwmapi.dll") return false;            // never replace our own proxy
 
@@ -543,9 +557,12 @@ bool extract_zip(const fs::path& zipPath, const fs::path& ue4ssDir, const ini::I
         return false;
     }
 
+    // Phase 1: extract + validate all selected entries into memory.
+    struct Item { fs::path dest; std::vector<unsigned char> data; };
+    std::vector<Item> items;
     mz_uint count = mz_zip_reader_get_num_files(&zip);
     bool ok = true;
-    int written = 0, skipped = 0;
+    int skipped = 0;
     for (mz_uint i = 0; i < count; ++i)
     {
         mz_zip_archive_file_stat st;
@@ -560,23 +577,40 @@ bool extract_zip(const fs::path& zipPath, const fs::path& ue4ssDir, const ini::I
         void* p = mz_zip_reader_extract_to_heap(&zip, i, &outSize, 0);
         if (!p) { ok = false; break; }
 
-        fs::path dest = ue4ssDir / fs::path(widen(rel));
-        bool w = write_file(dest, p, outSize);
+        Item it;
+        it.dest = ue4ssDir / fs::path(widen(rel));
+        it.data.assign((unsigned char*)p, (unsigned char*)p + outSize);
         mz_free(p);
-        if (!w) { ok = false; break; }
-        ++written;
+        items.push_back(std::move(it));
 
         if (showProgress)
         {
             progress::set_progress(count ? (int)((i + 1) * 100 / count) : -1);
-            progress::set_status(L"Installing: " + widen(rel));
+            progress::set_status(L"Verifying: " + widen(rel));
         }
     }
-
     mz_zip_reader_end(&zip);
+
+    if (!ok)
+    {
+        log_line("extract: validation FAILED (nothing written)");
+        if (err) *err = "archive validation failed";
+        return false;
+    }
+
+    // Phase 2: write the validated files to disk.
+    int written = 0;
+    for (const auto& it : items)
+    {
+        if (!write_file(it.dest, it.data.data(), it.data.size())) { ok = false; break; }
+        ++written;
+        if (showProgress) progress::set_status(L"Installing (" + std::to_wstring(written) + L"/" +
+                                               std::to_wstring(items.size()) + L")");
+    }
+
     log_line("extract: written=" + std::to_string(written) + " skipped=" + std::to_string(skipped) +
-             (ok ? " ok" : " FAILED"));
-    if (!ok && err) *err = "extraction failed";
+             (ok ? " ok" : " WRITE-FAILED"));
+    if (!ok && err) *err = "write failed";
     return ok;
 }
 
@@ -675,6 +709,8 @@ void run_blocking(const fs::path& baseDir)
     g_logPath = ue4ssDir / "updater.log";
     { std::ofstream truncate(g_logPath, std::ios::trunc); }  // fresh log each launch
 
+  try
+  {
     ini::Ini cfg;
     if (!cfg.load(iniPath.wstring()))
     {
@@ -698,8 +734,28 @@ void run_blocking(const fs::path& baseDir)
 
     log_line("run: channel=" + channel + " repo=" + repo + " installed=" + installedTag + "/" + installedAsset);
 
-    // A missing UE4SS.dll forces an install regardless of recorded [state].
-    const bool ue4ssPresent = fs::exists(ue4ssDir / "UE4SS.dll");
+    // Take the per-install update lock.
+    UpdateLock lock;
+    {
+        std::wstring name = L"UE4SS-Bootstrap-Updater-" +
+                            std::to_wstring(std::hash<std::wstring>{}(ue4ssDir.wstring()));
+        lock.h = CreateMutexW(nullptr, FALSE, name.c_str());
+        if (lock.h)
+        {
+            DWORD w = WaitForSingleObject(lock.h, 180000);  // wait up to 3 min
+            lock.owned = (w == WAIT_OBJECT_0 || w == WAIT_ABANDONED);
+        }
+    }
+    if (lock.h && !lock.owned)
+    {
+        log_line("another instance holds the update lock; skipping update");
+        sync_mods_txt(ue4ssDir, cfg);
+        return;
+    }
+
+    // is UE4SS installed on disk?
+    std::error_code ecPresent;
+    const bool ue4ssPresent = fs::exists(ue4ssDir / "UE4SS.dll", ecPresent);
 
     // Throttle network checks to once per check_interval_days (0 = every launch).
     int intervalDays = atoi(cfg.get("updater", "check_interval_days", "0").c_str());
@@ -762,8 +818,9 @@ void run_blocking(const fs::path& baseDir)
 
     wchar_t tempDir[MAX_PATH];
     GetTempPathW(MAX_PATH, tempDir);
-    const fs::path zipPath = fs::path(tempDir) / widen(rel->assetName);
-    { std::error_code ec; fs::remove(zipPath, ec); }  // clear any stale partial before a fresh download
+    const fs::path zipPath = fs::path(tempDir) /
+                             (std::to_wstring(GetCurrentProcessId()) + L"-" + widen(rel->assetName));
+    { std::error_code ec; fs::remove(zipPath, ec); }  // clear any stale partial
 
     if (showProgress)
     {
@@ -807,6 +864,17 @@ void run_blocking(const fs::path& baseDir)
     }
 
     if (showProgress) progress::close();
+  }
+  catch (const std::exception& e)
+  {
+      log_line(std::string("FATAL exception: ") + e.what());
+      progress::close();
+  }
+  catch (...)
+  {
+      log_line("FATAL unknown exception");
+      progress::close();
+  }
 }
 
 } // namespace updater

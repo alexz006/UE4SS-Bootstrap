@@ -14,7 +14,7 @@ void set_status(const std::wstring& text);
 // 0..100 for a determinate bar; -1 for indeterminate.
 void set_progress(int percent);
 
-// Process pending window messages.
+// No-op (the window runs its own message loop); kept for call-site compatibility.
 void pump();
 
 // Destroy the window.

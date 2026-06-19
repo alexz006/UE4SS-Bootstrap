@@ -118,7 +118,8 @@ HMODULE load_ue4ss_dll(HMODULE moduleHandle)
 
     // Check for override.txt
     const fs::path overrideFilePath = currentPath / "override.txt";
-    if (fs::exists(overrideFilePath))
+    std::error_code overrideEc;
+    if (fs::exists(overrideFilePath, overrideEc))
     {
         std::ifstream overrideFile(overrideFilePath);
         std::string overridePath;
@@ -169,14 +170,20 @@ static void load_ue4ss_or_die()
 }
 
 #if defined(UPDATER_ENABLED)
-// Runs the updater, then loads UE4SS. Off the loader lock (WinHTTP needs that).
+// Runs the updater, then loads UE4SS.
 static DWORD WINAPI updater_thread(LPVOID)
 {
-    wchar_t selfPath[1024]{'\0'};
-    GetModuleFileNameW(g_selfModule, selfPath, sizeof(selfPath) / sizeof(wchar_t));
-    const fs::path baseDir = fs::path(selfPath).parent_path();
-
-    updater::run_blocking(baseDir);
+    try
+    {
+        wchar_t selfPath[1024]{'\0'};
+        GetModuleFileNameW(g_selfModule, selfPath, sizeof(selfPath) / sizeof(wchar_t));
+        const fs::path baseDir = fs::path(selfPath).parent_path();
+        updater::run_blocking(baseDir);
+    }
+    catch (...)
+    {
+        // don't let exceptions escape the thread
+    }
     load_ue4ss_or_die();
     return 0;
 }
@@ -198,7 +205,7 @@ BOOL WINAPI DllMain(HMODULE hInstDll, DWORD fdwReason, LPVOID lpvReserved)
         }
 
 #if defined(UPDATER_ENABLED)
-        // Update + load UE4SS on a worker thread (runs once the loader lock clears).
+        // Update + load UE4SS on a worker thread.
         HANDLE th = CreateThread(nullptr, 0, updater_thread, nullptr, 0, nullptr);
         if (th)
         {
