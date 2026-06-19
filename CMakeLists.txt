@@ -56,3 +56,8 @@ if(UPDATER_ENABLED)
 endif()
 
 set_source_files_properties(src/miniz.c PROPERTIES COMPILE_DEFINITIONS "MINIZ_NO_ZLIB_COMPATIBLE_NAMES")
+
+# Whole-program optimization (LTCG) + dead-code elimination. /GL and /Gy only on
+# C/C++ (not the MASM stubs); /OPT:REF + /OPT:ICF strip unused/duplicate code.
+target_compile_options(dwmapi PRIVATE $<$<COMPILE_LANGUAGE:C,CXX>:/GL /Gy>)
+target_link_options(dwmapi PRIVATE /LTCG /OPT:REF /OPT:ICF)
