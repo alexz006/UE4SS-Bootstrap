@@ -1,0 +1,13 @@
+# Build output (the binary is shipped via GitHub Releases, not committed)
+/dist/
+
+# In-tree build dir, if ever used (the real build tree lives outside the repo)
+/build/
+
+# MSVC intermediates
+*.obj
+*.pdb
+*.ilk
+*.exp
+*.lib
+*.user
